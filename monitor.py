@@ -167,6 +167,7 @@ class AppleStoreMonitor:
     def __init__(self):
         self.count = 1
         self.timeout = 10
+        self.history = []
         self.alter_swc = True
 
     @staticmethod
@@ -416,7 +417,6 @@ class AppleStoreMonitor:
                         print('\t【{}】{}'.format(pickup_search_quote, store_pickup_product_title))
                         if pickup_search_quote == '今天可取货' or pickup_display != 'unavailable':
                             available_list.append((store_name, product_code, store_pickup_product_title))
-                available_time = time.time()
                 if len(available_list) > 0:
                     messages = []
                     print("命中货源，请注意 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
@@ -435,15 +435,20 @@ class AppleStoreMonitor:
                                                "第{}次扫描到直营店有货，信息如下：\n{}".format(self.count,
                                                                                              "\n".join(messages))))
                     self.alter_swc = False
+                    self.history.append(datetime.datetime.now())
                 else:
                     if not self.alter_swc:
-                        not_available_time = time.time()
+                        not_available_time = datetime.datetime.now()
+                        time_diff = not_available_time - self.history[-1]
+                        hours = time_diff.seconds // 3600
+                        minutes = (time_diff.seconds % 3600) // 60
+                        seconds = time_diff.seconds % 60
                         Utils.send_message(notification_configs,
                                            Utils.subject_title(
                                                "监测的货物已售罄！",
-                                               "本次放货时间:{}\n售罄时间:{}\n共持续:{}"
-                                               .format(available_time, not_available_time,
-                                                       not_available_time - available_time)))
+                                               "本次放货时间:{}\n售罄时间:{}\n共持续:{}{}{}"
+                                               .format(available_time.strftime("%Y年%m月%d日 %H:%M:%S"), not_available_time.strftime("%Y年%m月%d日 %H:%M:%S"),
+                                                       hours and str(hours) + "小时" or "", minutes and str(minutes) + "分" or "", seconds and str(seconds) + "秒" or "")))
                     self.alter_swc = True
 
             except Exception as err:
